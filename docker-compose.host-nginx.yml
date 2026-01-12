@@ -1,0 +1,32 @@
+version: '3.8'
+
+# Configuration for nginx running on host system (not in Docker)
+# MCP server exposes port 8000 to host so nginx can access it
+
+services:
+  dx-cluster-mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dx-cluster-mcp-server
+    restart: unless-stopped
+    ports:
+      # Expose port 8000 to host for nginx access
+      - "127.0.0.1:8000:8000"  # Only accessible from localhost
+    environment:
+      # MCP Server settings
+      - MCP_TRANSPORT=sse
+      - MCP_SERVER_HOST=0.0.0.0
+      - MCP_SERVER_PORT=8000
+      # NO TLS - nginx handles HTTPS
+      # DX Cluster connection settings
+      - DX_CLUSTER_HOST=${DX_CLUSTER_HOST:-dxc.nc7j.com}
+      - DX_CLUSTER_PORT=${DX_CLUSTER_PORT:-7300}
+      - DX_CLUSTER_CALLSIGN=${DX_CLUSTER_CALLSIGN:-MCP-SERVER}
+      - IARU_REGION=${IARU_REGION:-1}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; import urllib.request; urllib.request.urlopen('http://localhost:8000/health'); sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
