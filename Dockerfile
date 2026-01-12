@@ -33,8 +33,8 @@ RUN useradd -m -u 1000 mcp && \
 
 USER mcp
 
-# Expose port for MCP server (if needed for future HTTP transport)
-EXPOSE 3000
+# Expose port for MCP server (SSE/HTTP transport)
+EXPOSE 8000
 
 # Run the server
 CMD ["python", "-m", "dx_cluster_mcp_server.server"]

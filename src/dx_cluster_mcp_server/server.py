@@ -4,9 +4,14 @@ DX Cluster MCP Server
 
 An MCP server that provides access to ham radio DX cluster networks,
 allowing AI assistants to query DX spots and propagation information.
+
+Supports two transport modes:
+- stdio: For Claude Desktop and local integrations
+- sse: HTTP/SSE for Docker and network access
 """
 
 import asyncio
+import os
 from typing import Any, Optional
 
 from mcp.server import Server
@@ -103,15 +108,66 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent]:
         return [TextContent(type="text", text=f"Error: {str(e)}")]
 
 
-async def main() -> None:
-    """Run the MCP server."""
+async def main_stdio() -> None:
+    """Run the MCP server with stdio transport."""
     async with mcp.server.stdio.stdio_server() as (read_stream, write_stream):
         await app.run(read_stream, write_stream, app.create_initialization_options())
 
 
+async def main_sse() -> None:
+    """Run the MCP server with SSE transport."""
+    from mcp.server.sse import SseServerTransport
+    from starlette.applications import Starlette
+    from starlette.routing import Route
+    import uvicorn
+
+    # Create SSE transport
+    sse = SseServerTransport("/messages")
+
+    async def handle_sse(request):
+        async with sse.connect_sse(
+            request.scope, request.receive, request._send
+        ) as streams:
+            await app.run(
+                streams[0], streams[1], app.create_initialization_options()
+            )
+
+    async def handle_messages(request):
+        await sse.handle_post_message(request.scope, request.receive, request._send)
+
+    # Create Starlette app
+    starlette_app = Starlette(
+        routes=[
+            Route("/sse", endpoint=handle_sse),
+            Route("/messages", endpoint=handle_messages, methods=["POST"]),
+        ]
+    )
+
+    # Get configuration
+    host = os.getenv("MCP_SERVER_HOST", "0.0.0.0")
+    port = int(os.getenv("MCP_SERVER_PORT", "8000"))
+
+    print(f"Starting DX Cluster MCP Server on http://{host}:{port}")
+    print(f"SSE endpoint: http://{host}:{port}/sse")
+    print(f"Messages endpoint: http://{host}:{port}/messages")
+
+    # Run server
+    config = uvicorn.Config(starlette_app, host=host, port=port, log_level="info")
+    server = uvicorn.Server(config)
+    await server.serve()
+
+
 def run() -> None:
-    """Entry point for the server."""
-    asyncio.run(main())
+    """Entry point for the server.
+
+    Runs in stdio mode by default, or SSE mode if MCP_TRANSPORT=sse.
+    """
+    transport = os.getenv("MCP_TRANSPORT", "stdio").lower()
+
+    if transport == "sse":
+        asyncio.run(main_sse())
+    else:
+        asyncio.run(main_stdio())
 
 
 if __name__ == "__main__":
