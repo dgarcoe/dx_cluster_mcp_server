@@ -162,6 +162,76 @@ export MCP_TRANSPORT=stdio
 python -m dx_cluster_mcp_server.server
 ```
 
+## HTTPS/TLS Setup
+
+**⚠ Claude Desktop requires HTTPS** for SSE connections. You must enable TLS to use the server with Claude Desktop.
+
+### Quick Setup (Self-Signed Certificates for Development)
+
+1. Generate self-signed certificates:
+```bash
+./scripts/generate_certs.sh
+```
+
+This creates `certs/cert.pem` and `certs/key.pem`.
+
+2. Copy and configure environment:
+```bash
+cp .env.example .env
+# Edit .env to ensure SSL paths are set:
+# MCP_SSL_CERTFILE=/app/certs/cert.pem
+# MCP_SSL_KEYFILE=/app/certs/key.pem
+```
+
+3. Start the server:
+```bash
+docker-compose up -d
+```
+
+The server will now be available at `https://localhost:8000`
+
+4. **Trust the certificate** (required for Claude Desktop):
+
+**macOS:**
+```bash
+sudo security add-trusted-cert -d -r trustRoot \
+  -k /Library/Keychains/System.keychain ./certs/cert.pem
+```
+
+**Linux:**
+```bash
+sudo cp ./certs/cert.pem /usr/local/share/ca-certificates/dx-cluster-mcp.crt
+sudo update-ca-certificates
+```
+
+**Windows:**
+- Double-click `certs/cert.pem`
+- Click "Install Certificate"
+- Select "Local Machine"
+- Place in "Trusted Root Certification Authorities"
+
+### Production Setup (Proper Certificates)
+
+For production use, obtain certificates from a trusted CA (Let's Encrypt, etc.):
+
+```bash
+# Set environment variables to point to your certificates
+export MCP_SSL_CERTFILE=/path/to/your/fullchain.pem
+export MCP_SSL_KEYFILE=/path/to/your/privkey.pem
+
+# Update docker-compose.yml to mount your certificate directory
+```
+
+### Verify HTTPS is Working
+
+```bash
+# Should return certificate info
+curl -k https://localhost:8000/health
+
+# Or use openssl
+openssl s_client -connect localhost:8000 -showcerts
+```
+
 ## MCP Integration
 
 ### Claude Desktop Configuration
@@ -171,31 +241,23 @@ Add to your Claude Desktop config file:
 **MacOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 **Windows**: `%APPDATA%/Claude/claude_desktop_config.json`
 
+#### Option 1: SSE Transport (Docker with HTTPS)
+
+**Prerequisites:** Start the server with HTTPS enabled (see HTTPS/TLS Setup above)
+
 ```json
 {
   "mcpServers": {
     "dx-cluster": {
-      "command": "docker",
-      "args": [
-        "run",
-        "-i",
-        "--rm",
-        "-e",
-        "DX_CLUSTER_HOST=dxc.nc7j.com",
-        "-e",
-        "DX_CLUSTER_PORT=7300",
-        "-e",
-        "DX_CLUSTER_CALLSIGN=YOUR-CALLSIGN",
-        "-e",
-        "IARU_REGION=2",
-        "dx-cluster-mcp-server"
-      ]
+      "url": "https://localhost:8000"
     }
   }
 }
 ```
 
-Or if running locally with Python:
+**Note:** Ensure the self-signed certificate is trusted on your system, or Claude Desktop will reject the connection.
+
+#### Option 2: Stdio Transport (Local Python)
 
 ```json
 {
@@ -204,6 +266,7 @@ Or if running locally with Python:
       "command": "python",
       "args": ["-m", "dx_cluster_mcp_server.server"],
       "env": {
+        "MCP_TRANSPORT": "stdio",
         "DX_CLUSTER_HOST": "dxc.nc7j.com",
         "DX_CLUSTER_PORT": "7300",
         "DX_CLUSTER_CALLSIGN": "YOUR-CALLSIGN",
