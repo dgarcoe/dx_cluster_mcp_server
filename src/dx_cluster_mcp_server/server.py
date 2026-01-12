@@ -119,6 +119,7 @@ async def main_sse() -> None:
     from mcp.server.sse import SseServerTransport
     from starlette.applications import Starlette
     from starlette.routing import Route
+    from starlette.responses import JSONResponse
     import uvicorn
 
     # Create SSE transport
@@ -135,9 +136,24 @@ async def main_sse() -> None:
     async def handle_messages(request):
         await sse.handle_post_message(request.scope, request.receive, request._send)
 
+    async def health_check(request):
+        """Simple health check endpoint."""
+        return JSONResponse({
+            "status": "healthy",
+            "service": "dx-cluster-mcp-server",
+            "version": "0.1.0",
+            "transport": "sse",
+            "endpoints": {
+                "health": "/health",
+                "sse": "/sse",
+                "messages": "/messages"
+            }
+        })
+
     # Create Starlette app
     starlette_app = Starlette(
         routes=[
+            Route("/health", endpoint=health_check, methods=["GET"]),
             Route("/sse", endpoint=handle_sse),
             Route("/messages", endpoint=handle_messages, methods=["POST"]),
         ]
@@ -148,6 +164,7 @@ async def main_sse() -> None:
     port = int(os.getenv("MCP_SERVER_PORT", "8000"))
 
     print(f"Starting DX Cluster MCP Server on http://{host}:{port}")
+    print(f"Health check: http://{host}:{port}/health")
     print(f"SSE endpoint: http://{host}:{port}/sse")
     print(f"Messages endpoint: http://{host}:{port}/messages")
 

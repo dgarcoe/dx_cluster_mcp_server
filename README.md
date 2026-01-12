@@ -276,6 +276,79 @@ Once configured, you can ask Claude questions like:
 - "Is K1ABC being spotted anywhere?"
 - "What's the cluster status?"
 
+## Testing the Server
+
+### Health Check
+
+The server provides a simple health check endpoint that doesn't require MCP protocol:
+
+```bash
+curl http://localhost:8000/health
+```
+
+Expected response:
+```json
+{
+  "status": "healthy",
+  "service": "dx-cluster-mcp-server",
+  "version": "0.1.0",
+  "transport": "sse",
+  "endpoints": {
+    "health": "/health",
+    "sse": "/sse",
+    "messages": "/messages"
+  }
+}
+```
+
+### Testing MCP Connection
+
+Use the provided test client to verify full MCP functionality:
+
+```bash
+# Install required dependencies
+pip install mcp aiohttp
+
+# Run the test client
+python test_mcp_client.py
+
+# Test with custom URL
+python test_mcp_client.py --url http://localhost:8000
+
+# Health check only
+python test_mcp_client.py --health-only
+```
+
+The test client will:
+1. Check server health
+2. Connect via MCP SSE protocol
+3. List available tools and resources
+4. Test calling tools (get_cluster_status, get_recent_spots)
+
+### Manual Testing with MCP Client
+
+```python
+import asyncio
+from mcp import ClientSession
+from mcp.client.sse import sse_client
+
+async def test():
+    async with sse_client("http://localhost:8000") as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+
+            # List tools
+            tools = await session.list_tools()
+
+            # Call a tool
+            result = await session.call_tool("get_recent_spots", {"count": 10})
+            print(result)
+
+asyncio.run(test())
+```
+
+**Note**: The `/sse` and `/messages` endpoints require proper MCP protocol handshake and cannot be tested with simple curl commands.
+
 ## Development
 
 ### Project Structure
