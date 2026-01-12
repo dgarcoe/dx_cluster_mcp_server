@@ -85,13 +85,27 @@ async def test_health_check(server_url: str = "http://localhost:8000"):
             async with session.get(health_url) as response:
                 if response.status == 200:
                     data = await response.json()
-                    print("✓ Server is healthy!")
-                    print(f"  Status: {data.get('status')}")
+                    print("✓ MCP Server is healthy!")
                     print(f"  Service: {data.get('service')}")
                     print(f"  Version: {data.get('version')}")
                     print(f"  Transport: {data.get('transport')}")
-                    print(f"  Endpoints: {data.get('endpoints')}")
-                    return True
+
+                    # Check DX cluster connection
+                    dx_cluster = data.get('dx_cluster', {})
+                    cluster_connected = dx_cluster.get('connected', False)
+
+                    print(f"\n  DX Cluster Connection:")
+                    if cluster_connected:
+                        info = dx_cluster.get('info', {})
+                        print(f"    ✓ Connected to {info.get('host')}:{info.get('port')}")
+                        print(f"    Callsign: {info.get('callsign')}")
+                        print(f"    IARU Region: {info.get('iaru_region')}")
+                        print(f"    Cached spots: {info.get('cached_spots')}")
+                    else:
+                        print(f"    ⚠ Not connected to DX cluster yet")
+                        print(f"    (Connection happens on first MCP request)")
+
+                    return True  # Server is healthy
                 else:
                     print(f"✗ Health check failed with status: {response.status}")
                     return False
@@ -127,7 +141,7 @@ async def main():
     health_ok = await test_health_check(args.url)
 
     if not health_ok:
-        print("\n⚠ Server health check failed. Is the server running?")
+        print("\n⚠ Server is not responding. Is the server running?")
         print("Start the server with: docker-compose up")
         sys.exit(1)
 

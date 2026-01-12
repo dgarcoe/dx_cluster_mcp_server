@@ -280,19 +280,29 @@ Once configured, you can ask Claude questions like:
 
 ### Health Check
 
-The server provides a simple health check endpoint that doesn't require MCP protocol:
+The server provides a simple health check endpoint that shows both HTTP server and DX cluster connection status:
 
 ```bash
 curl http://localhost:8000/health
 ```
 
-Expected response:
+Expected response when **DX cluster is connected**:
 ```json
 {
   "status": "healthy",
   "service": "dx-cluster-mcp-server",
   "version": "0.1.0",
   "transport": "sse",
+  "dx_cluster": {
+    "connected": true,
+    "info": {
+      "host": "dxc.nc7j.com",
+      "port": 7300,
+      "callsign": "MCP-SERVER",
+      "iaru_region": "2",
+      "cached_spots": 42
+    }
+  },
   "endpoints": {
     "health": "/health",
     "sse": "/sse",
@@ -300,6 +310,11 @@ Expected response:
   }
 }
 ```
+
+**Checking DX Cluster Connection:**
+- `dx_cluster.connected: true` = Connected to DX cluster and receiving spots ✓
+- `dx_cluster.connected: false` = Not yet connected (connection happens on first MCP request) ⚠
+- `dx_cluster.info.cached_spots` = Number of spots received from the cluster
 
 ### Testing MCP Connection
 
