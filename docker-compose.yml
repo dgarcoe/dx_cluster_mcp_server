@@ -14,6 +14,9 @@ services:
       - MCP_TRANSPORT=sse
       - MCP_SERVER_HOST=0.0.0.0
       - MCP_SERVER_PORT=8000
+      # TLS/SSL settings (required for Claude Desktop)
+      - MCP_SSL_CERTFILE=${MCP_SSL_CERTFILE}
+      - MCP_SSL_KEYFILE=${MCP_SSL_KEYFILE}
       # DX Cluster connection settings
       - DX_CLUSTER_HOST=${DX_CLUSTER_HOST:-dxc.nc7j.com}
       - DX_CLUSTER_PORT=${DX_CLUSTER_PORT:-7300}
@@ -21,6 +24,11 @@ services:
       - IARU_REGION=${IARU_REGION:-1}
     stdin_open: true
     tty: true
+    volumes:
+      # Mount certificates directory (generate with: ./scripts/generate_certs.sh)
+      - ./certs:/app/certs:ro
+      # Optional: Mount a volume for logs
+      # - ./logs:/app/logs
     # Uncomment if you want to use host networking for easier local testing
     # network_mode: host
     networks:
@@ -31,9 +39,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
-    # Optional: Mount a volume for logs
-    # volumes:
-    #   - ./logs:/app/logs
 
 networks:
   mcp-network:

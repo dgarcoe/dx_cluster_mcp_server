@@ -184,13 +184,36 @@ async def main_sse() -> None:
     host = os.getenv("MCP_SERVER_HOST", "0.0.0.0")
     port = int(os.getenv("MCP_SERVER_PORT", "8000"))
 
-    print(f"Starting DX Cluster MCP Server on http://{host}:{port}")
-    print(f"Health check: http://{host}:{port}/health")
-    print(f"SSE endpoint: http://{host}:{port}/sse")
-    print(f"Messages endpoint: http://{host}:{port}/messages")
+    # TLS/SSL configuration
+    ssl_certfile = os.getenv("MCP_SSL_CERTFILE")
+    ssl_keyfile = os.getenv("MCP_SSL_KEYFILE")
+    use_ssl = ssl_certfile and ssl_keyfile
+
+    protocol = "https" if use_ssl else "http"
+
+    print(f"Starting DX Cluster MCP Server on {protocol}://{host}:{port}")
+    print(f"Health check: {protocol}://{host}:{port}/health")
+    print(f"SSE endpoint: {protocol}://{host}:{port}/sse")
+    print(f"Messages endpoint: {protocol}://{host}:{port}/messages")
+
+    if use_ssl:
+        print(f"TLS enabled:")
+        print(f"  Certificate: {ssl_certfile}")
+        print(f"  Key: {ssl_keyfile}")
+    else:
+        print("⚠ Running without TLS (HTTP only)")
+        print("  For Claude Desktop, HTTPS is required")
+        print("  Set MCP_SSL_CERTFILE and MCP_SSL_KEYFILE environment variables")
 
     # Run server
-    config = uvicorn.Config(starlette_app, host=host, port=port, log_level="info")
+    config = uvicorn.Config(
+        starlette_app,
+        host=host,
+        port=port,
+        log_level="info",
+        ssl_certfile=ssl_certfile,
+        ssl_keyfile=ssl_keyfile,
+    )
     server = uvicorn.Server(config)
     await server.serve()
 
