@@ -47,6 +47,12 @@ class DXClusterClient:
             self.connected = True
             self._start_receive_loop()
 
+            print(
+                f"✓ Connected to DX cluster: {self.config.host}:{self.config.port} "
+                f"as {self.config.callsign} (IARU Region {self.config.iaru_region})",
+                file=sys.stderr
+            )
+
             # Wait for initial spots to populate
             await asyncio.sleep(INITIAL_SPOTS_WAIT_SECONDS)
 

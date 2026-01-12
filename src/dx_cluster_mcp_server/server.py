@@ -119,6 +119,7 @@ async def main_sse() -> None:
     from mcp.server.sse import SseServerTransport
     from starlette.applications import Starlette
     from starlette.routing import Route
+    from starlette.responses import JSONResponse
     import uvicorn
 
     # Create SSE transport
@@ -135,9 +136,45 @@ async def main_sse() -> None:
     async def handle_messages(request):
         await sse.handle_post_message(request.scope, request.receive, request._send)
 
+    async def health_check(request):
+        """Simple health check endpoint with DX cluster connection status."""
+        global _dx_client
+
+        # Check DX cluster connection
+        cluster_connected = False
+        cluster_info = None
+
+        if _dx_client is not None:
+            cluster_connected = _dx_client.connected
+            if cluster_connected:
+                cluster_info = {
+                    "host": _dx_client.config.host,
+                    "port": _dx_client.config.port,
+                    "callsign": _dx_client.config.callsign,
+                    "iaru_region": _dx_client.config.iaru_region,
+                    "cached_spots": len(_dx_client.spots_buffer)
+                }
+
+        return JSONResponse({
+            "status": "healthy",
+            "service": "dx-cluster-mcp-server",
+            "version": "0.1.0",
+            "transport": "sse",
+            "dx_cluster": {
+                "connected": cluster_connected,
+                "info": cluster_info
+            },
+            "endpoints": {
+                "health": "/health",
+                "sse": "/sse",
+                "messages": "/messages"
+            }
+        })
+
     # Create Starlette app
     starlette_app = Starlette(
         routes=[
+            Route("/health", endpoint=health_check, methods=["GET"]),
             Route("/sse", endpoint=handle_sse),
             Route("/messages", endpoint=handle_messages, methods=["POST"]),
         ]
@@ -148,6 +185,7 @@ async def main_sse() -> None:
     port = int(os.getenv("MCP_SERVER_PORT", "8000"))
 
     print(f"Starting DX Cluster MCP Server on http://{host}:{port}")
+    print(f"Health check: http://{host}:{port}/health")
     print(f"SSE endpoint: http://{host}:{port}/sse")
     print(f"Messages endpoint: http://{host}:{port}/messages")
 
