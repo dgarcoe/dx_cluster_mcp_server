@@ -118,6 +118,50 @@ Set the `IARU_REGION` environment variable to match your location for correct ba
 - **W6CUA**: w6cua.no-ip.org:7300
 - **VE7CC**: ve7cc.net:23
 
+## Transport Modes
+
+The server supports two transport modes:
+
+### SSE (Server-Sent Events) - HTTP Transport
+
+Best for Docker deployments and network access. The server exposes HTTP endpoints for MCP communication.
+
+**Using Docker Compose** (recommended for HTTP access):
+```bash
+docker-compose up -d
+```
+
+The server will be available at:
+- **SSE endpoint**: `http://localhost:8000/sse`
+- **Messages endpoint**: `http://localhost:8000/messages` (POST)
+
+**Environment variables for SSE mode**:
+- `MCP_TRANSPORT=sse` - Enable SSE transport
+- `MCP_SERVER_HOST=0.0.0.0` - Server bind address
+- `MCP_SERVER_PORT=8000` - Server port
+
+**Accessing via HTTP**:
+You can connect to the MCP server using any MCP client that supports SSE transport:
+
+```python
+import mcp.client.sse
+
+async with mcp.client.sse.sse_client("http://localhost:8000") as client:
+    tools = await client.list_tools()
+```
+
+### Stdio Transport
+
+Best for Claude Desktop and local integrations. Communication happens via standard input/output.
+
+**Using Claude Desktop**: See [Claude Desktop Configuration](#claude-desktop-configuration) below.
+
+**Running locally**:
+```bash
+export MCP_TRANSPORT=stdio
+python -m dx_cluster_mcp_server.server
+```
+
 ## MCP Integration
 
 ### Claude Desktop Configuration
