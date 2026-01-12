@@ -45,6 +45,7 @@ class ClusterStatus(BaseModel):
     host: str = Field(description="Hostname of the cluster")
     port: int = Field(description="Port number")
     callsign: str = Field(description="Callsign used for connection")
+    iaru_region: str = Field(description="IARU region (1, 2, or 3)")
     cached_spots: int = Field(description="Number of spots in the buffer")
 
     def to_string(self) -> str:
@@ -58,5 +59,6 @@ class ClusterStatus(BaseModel):
             f"• Connected: {self.connected}\n"
             f"• Host: {self.host}:{self.port}\n"
             f"• Callsign: {self.callsign}\n"
+            f"• IARU Region: {self.iaru_region}\n"
             f"• Cached spots: {self.cached_spots}"
         )

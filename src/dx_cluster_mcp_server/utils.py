@@ -1,10 +1,10 @@
 """Utility functions for DX Cluster MCP Server."""
 
 import re
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict
 
 from .models import DXSpot
-from .constants import DX_SPOT_PATTERN, BAND_RANGES
+from .constants import DX_SPOT_PATTERN, BAND_RANGES_BY_REGION, BAND_RANGES
 
 
 def parse_dx_spot(line: str) -> Optional[DXSpot]:
@@ -39,28 +39,44 @@ def parse_dx_spot(line: str) -> Optional[DXSpot]:
         return None
 
 
-def get_band_range(band: str) -> Optional[Tuple[float, float]]:
-    """Get frequency range for a given band.
+def get_band_ranges_for_region(region: str) -> Dict[str, Tuple[float, float]]:
+    """Get band ranges for a specific IARU region.
+
+    Args:
+        region: IARU region ('1', '2', or '3').
+
+    Returns:
+        Dictionary mapping band names to frequency ranges.
+    """
+    return BAND_RANGES_BY_REGION.get(region, BAND_RANGES_BY_REGION["2"])
+
+
+def get_band_range(band: str, region: str = "2") -> Optional[Tuple[float, float]]:
+    """Get frequency range for a given band in a specific region.
 
     Args:
         band: Band name (e.g., '20m', '40m').
+        region: IARU region ('1', '2', or '3'). Defaults to '2'.
 
     Returns:
         Tuple of (min_freq, max_freq) in kHz, or None if band is invalid.
     """
-    return BAND_RANGES.get(band)
+    band_ranges = get_band_ranges_for_region(region)
+    return band_ranges.get(band)
 
 
-def validate_band(band: str) -> bool:
-    """Check if a band name is valid.
+def validate_band(band: str, region: str = "2") -> bool:
+    """Check if a band name is valid for a specific region.
 
     Args:
         band: Band name to validate.
+        region: IARU region ('1', '2', or '3'). Defaults to '2'.
 
     Returns:
         True if band is valid, False otherwise.
     """
-    return band in BAND_RANGES
+    band_ranges = get_band_ranges_for_region(region)
+    return band in band_ranges
 
 
 def validate_frequency_range(min_freq: float, max_freq: float) -> bool:

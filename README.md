@@ -55,6 +55,7 @@ docker run -it --rm \
   -e DX_CLUSTER_HOST=dxc.nc7j.com \
   -e DX_CLUSTER_PORT=7300 \
   -e DX_CLUSTER_CALLSIGN=YOUR-CALLSIGN \
+  -e IARU_REGION=2 \
   dx-cluster-mcp-server
 ```
 
@@ -79,6 +80,7 @@ pip install -e .
 export DX_CLUSTER_HOST=dxc.nc7j.com
 export DX_CLUSTER_PORT=7300
 export DX_CLUSTER_CALLSIGN=YOUR-CALLSIGN
+export IARU_REGION=2
 ```
 
 5. Run the server:
@@ -95,6 +97,19 @@ Configure the server using environment variables:
 | `DX_CLUSTER_HOST` | Hostname of the DX cluster | `dxc.nc7j.com` |
 | `DX_CLUSTER_PORT` | Port number (usually 7300 or 23) | `7300` |
 | `DX_CLUSTER_CALLSIGN` | Your amateur radio callsign | `MCP-SERVER` |
+| `IARU_REGION` | IARU region (1, 2, or 3) for band allocations | `2` |
+
+### IARU Regions
+
+The server supports different amateur radio band allocations for each IARU region:
+
+- **Region 1**: Europe, Africa, Middle East, Northern Asia
+- **Region 2**: Americas (North and South America)
+- **Region 3**: Asia-Pacific (rest of Asia, Oceania)
+
+Set the `IARU_REGION` environment variable to match your location for correct band frequency ranges. For example:
+- 160m band is 1810-2000 kHz in Region 1, but 1800-2000 kHz in Regions 2 and 3
+- 80m band is 3500-3800 kHz in Region 1, but 3500-4000 kHz in Region 2
 
 ### Popular DX Clusters
 
@@ -127,6 +142,8 @@ Add to your Claude Desktop config file:
         "DX_CLUSTER_PORT=7300",
         "-e",
         "DX_CLUSTER_CALLSIGN=YOUR-CALLSIGN",
+        "-e",
+        "IARU_REGION=2",
         "dx-cluster-mcp-server"
       ]
     }
@@ -145,7 +162,8 @@ Or if running locally with Python:
       "env": {
         "DX_CLUSTER_HOST": "dxc.nc7j.com",
         "DX_CLUSTER_PORT": "7300",
-        "DX_CLUSTER_CALLSIGN": "YOUR-CALLSIGN"
+        "DX_CLUSTER_CALLSIGN": "YOUR-CALLSIGN",
+        "IARU_REGION": "2"
       }
     }
   }

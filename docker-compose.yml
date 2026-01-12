@@ -12,6 +12,7 @@ services:
       - DX_CLUSTER_HOST=${DX_CLUSTER_HOST:-dxc.nc7j.com}
       - DX_CLUSTER_PORT=${DX_CLUSTER_PORT:-7300}
       - DX_CLUSTER_CALLSIGN=${DX_CLUSTER_CALLSIGN:-MCP-SERVER}
+      - IARU_REGION=${IARU_REGION:-2}
     stdin_open: true
     tty: true
     # Uncomment if you want to use host networking for easier local testing
