@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dx-cluster-mcp-server"
+version = "0.1.0"
+description = "MCP server for accessing ham radio DX clusters"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp>=1.0.0",
+    "pydantic>=2.0.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.scripts]
+dx-cluster-mcp-server = "dx_cluster_mcp_server.server:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
