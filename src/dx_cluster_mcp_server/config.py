@@ -12,6 +12,7 @@ class DXClusterConfig:
     host: str
     port: int
     callsign: str
+    iaru_region: str = "2"  # Default to Region 2 (Americas)
     buffer_size: int = 500
     connection_timeout: int = 10
     receive_timeout: int = 120
@@ -27,6 +28,7 @@ class DXClusterConfig:
             host=os.getenv("DX_CLUSTER_HOST", "dxc.nc7j.com"),
             port=int(os.getenv("DX_CLUSTER_PORT", "7300")),
             callsign=os.getenv("DX_CLUSTER_CALLSIGN", "MCP-SERVER"),
+            iaru_region=os.getenv("IARU_REGION", "2"),
             buffer_size=int(os.getenv("DX_CLUSTER_BUFFER_SIZE", "500")),
             connection_timeout=int(os.getenv("DX_CLUSTER_CONNECTION_TIMEOUT", "10")),
             receive_timeout=int(os.getenv("DX_CLUSTER_RECEIVE_TIMEOUT", "120")),
@@ -46,6 +48,11 @@ class DXClusterConfig:
 
         if not self.callsign:
             raise ValueError("DX_CLUSTER_CALLSIGN cannot be empty")
+
+        if self.iaru_region not in ["1", "2", "3"]:
+            raise ValueError(
+                f"Invalid IARU region: {self.iaru_region}. Must be '1', '2', or '3'"
+            )
 
         if self.buffer_size < 1:
             raise ValueError(f"Buffer size must be positive: {self.buffer_size}")

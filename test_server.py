@@ -62,10 +62,12 @@ def test_models():
             host="dxc.nc7j.com",
             port=7300,
             callsign="TEST",
+            iaru_region="2",
             cached_spots=42,
         )
         status_str = status.to_string()
         assert "dxc.nc7j.com" in status_str
+        assert "Region: 2" in status_str
         print(f"  ClusterStatus created successfully")
 
         print("✓ Models working correctly")

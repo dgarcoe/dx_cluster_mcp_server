@@ -148,7 +148,7 @@ class DXClusterClient:
         Returns:
             List of DXSpot objects for the specified band.
         """
-        band_range = get_band_range(band)
+        band_range = get_band_range(band, self.config.iaru_region)
         if not band_range:
             return []
 
@@ -166,6 +166,7 @@ class DXClusterClient:
             "host": self.config.host,
             "port": self.config.port,
             "callsign": self.config.callsign,
+            "iaru_region": self.config.iaru_region,
             "cached_spots": len(self.spots_buffer),
         }
 
