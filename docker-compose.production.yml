@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  dx-cluster-mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dx-cluster-mcp-server
+    restart: unless-stopped
+    ports:
+      - "${MCP_SERVER_PORT:-443}:8000"
+    environment:
+      # MCP Server settings
+      - MCP_TRANSPORT=sse
+      - MCP_SERVER_HOST=0.0.0.0
+      - MCP_SERVER_PORT=8000
+      # Production TLS/SSL settings
+      # Point these to your production certificates
+      - MCP_SSL_CERTFILE=/app/certs/fullchain.pem
+      - MCP_SSL_KEYFILE=/app/certs/privkey.pem
+      # DX Cluster connection settings
+      - DX_CLUSTER_HOST=${DX_CLUSTER_HOST:-dxc.nc7j.com}
+      - DX_CLUSTER_PORT=${DX_CLUSTER_PORT:-7300}
+      - DX_CLUSTER_CALLSIGN=${DX_CLUSTER_CALLSIGN:-MCP-SERVER}
+      - IARU_REGION=${IARU_REGION:-2}
+    stdin_open: true
+    tty: true
+    volumes:
+      # Mount your production certificates directory
+      # For Let's Encrypt: /etc/letsencrypt/live/yourdomain.com/
+      - ${CERT_PATH:-/etc/letsencrypt/live/yourdomain.com}:/app/certs:ro
+    networks:
+      - mcp-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  mcp-network:
+    driver: bridge
