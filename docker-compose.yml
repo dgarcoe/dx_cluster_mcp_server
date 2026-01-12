@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  dx-cluster-mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dx-cluster-mcp-server
+    restart: unless-stopped
+    environment:
+      # DX Cluster connection settings
+      - DX_CLUSTER_HOST=${DX_CLUSTER_HOST:-dxc.nc7j.com}
+      - DX_CLUSTER_PORT=${DX_CLUSTER_PORT:-7300}
+      - DX_CLUSTER_CALLSIGN=${DX_CLUSTER_CALLSIGN:-MCP-SERVER}
+    stdin_open: true
+    tty: true
+    # Uncomment if you want to use host networking for easier local testing
+    # network_mode: host
+    networks:
+      - mcp-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    # Optional: Mount a volume for logs
+    # volumes:
+    #   - ./logs:/app/logs
+
+networks:
+  mcp-network:
+    driver: bridge

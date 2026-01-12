@@ -1,0 +1,118 @@
+#!/usr/bin/env python3
+"""
+DX Cluster MCP Server
+
+An MCP server that provides access to ham radio DX cluster networks,
+allowing AI assistants to query DX spots and propagation information.
+"""
+
+import asyncio
+from typing import Any, Optional
+
+from mcp.server import Server
+from mcp.types import Resource, Tool, TextContent
+import mcp.server.stdio
+
+from .config import DXClusterConfig
+from .dx_client import DXClusterClient
+from .mcp_handlers import MCPResourceHandler, MCPToolHandler
+
+
+# Global client instance
+_dx_client: Optional[DXClusterClient] = None
+_resource_handler: Optional[MCPResourceHandler] = None
+_tool_handler: Optional[MCPToolHandler] = None
+
+
+async def get_client() -> DXClusterClient:
+    """Get or create the DX cluster client.
+
+    Returns:
+        DXClusterClient instance.
+    """
+    global _dx_client, _resource_handler, _tool_handler
+
+    if _dx_client is None or not _dx_client.connected:
+        config = DXClusterConfig.from_environment()
+        config.validate()
+
+        _dx_client = DXClusterClient(config)
+        await _dx_client.connect()
+
+        _resource_handler = MCPResourceHandler(_dx_client)
+        _tool_handler = MCPToolHandler(_dx_client)
+
+    return _dx_client
+
+
+# Create MCP server
+app = Server("dx-cluster-mcp-server")
+
+
+@app.list_resources()
+async def list_resources() -> list[Resource]:
+    """List available MCP resources.
+
+    Returns:
+        List of Resource objects.
+    """
+    await get_client()
+    return _resource_handler.list_resources()
+
+
+@app.read_resource()
+async def read_resource(uri: str) -> str:
+    """Read an MCP resource.
+
+    Args:
+        uri: Resource URI to read.
+
+    Returns:
+        Resource content as string.
+    """
+    await get_client()
+    return _resource_handler.read_resource(uri)
+
+
+@app.list_tools()
+async def list_tools() -> list[Tool]:
+    """List available MCP tools.
+
+    Returns:
+        List of Tool objects.
+    """
+    await get_client()
+    return _tool_handler.list_tools()
+
+
+@app.call_tool()
+async def call_tool(name: str, arguments: Any) -> list[TextContent]:
+    """Handle MCP tool invocations.
+
+    Args:
+        name: Tool name.
+        arguments: Tool arguments.
+
+    Returns:
+        List of TextContent responses.
+    """
+    try:
+        await get_client()
+        return _tool_handler.handle_tool_call(name, arguments)
+    except Exception as e:
+        return [TextContent(type="text", text=f"Error: {str(e)}")]
+
+
+async def main() -> None:
+    """Run the MCP server."""
+    async with mcp.server.stdio.stdio_server() as (read_stream, write_stream):
+        await app.run(read_stream, write_stream, app.create_initialization_options())
+
+
+def run() -> None:
+    """Entry point for the server."""
+    asyncio.run(main())
+
+
+if __name__ == "__main__":
+    run()
