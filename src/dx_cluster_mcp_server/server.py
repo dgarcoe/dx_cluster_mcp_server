@@ -118,7 +118,7 @@ async def main_sse() -> None:
     """Run the MCP server with SSE transport."""
     from mcp.server.sse import SseServerTransport
     from starlette.applications import Starlette
-    from starlette.routing import Route
+    from starlette.routing import Route, Mount
     from starlette.responses import JSONResponse
     import uvicorn
 
@@ -173,8 +173,8 @@ async def main_sse() -> None:
     starlette_app = Starlette(
         routes=[
             Route("/health", endpoint=health_check, methods=["GET"]),
-            Route("/sse", endpoint=handle_sse),
-            Route("/messages", endpoint=handle_messages, methods=["POST"]),
+            Mount("/sse", app=handle_sse),
+            Mount("/messages", app=handle_messages),
         ]
     )
 
