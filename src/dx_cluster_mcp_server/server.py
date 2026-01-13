@@ -118,7 +118,7 @@ async def main_sse() -> None:
     """Run the MCP server with SSE transport."""
     from mcp.server.sse import SseServerTransport
     from starlette.applications import Starlette
-    from starlette.routing import Route, Mount
+    from starlette.routing import Route
     from starlette.responses import JSONResponse
     import uvicorn
 
@@ -169,14 +169,25 @@ async def main_sse() -> None:
             }
         })
 
-    # Create Starlette app
+    # Create Starlette app (only for health check)
     starlette_app = Starlette(
         routes=[
             Route("/health", endpoint=health_check, methods=["GET"]),
-            Mount("/sse", app=handle_sse),
-            Mount("/messages", app=handle_messages),
         ]
     )
+
+    # Create ASGI middleware to intercept SSE paths
+    async def asgi_app(scope, receive, send):
+        if scope["type"] == "http":
+            path = scope["path"]
+            if path == "/sse":
+                await handle_sse(scope, receive, send)
+                return
+            elif path == "/messages":
+                await handle_messages(scope, receive, send)
+                return
+        # Pass through to Starlette for other routes
+        await starlette_app(scope, receive, send)
 
     # Get configuration
     host = os.getenv("MCP_SERVER_HOST", "0.0.0.0")
@@ -205,7 +216,7 @@ async def main_sse() -> None:
 
     # Run server
     config = uvicorn.Config(
-        starlette_app,
+        asgi_app,
         host=host,
         port=port,
         log_level="info",
