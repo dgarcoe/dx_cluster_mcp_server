@@ -30,7 +30,7 @@ services:
       # For Let's Encrypt: /etc/letsencrypt/live/yourdomain.com/
       - ${CERT_PATH:-/etc/letsencrypt/live/yourdomain.com}:/app/certs:ro
     networks:
-      - mcp-network
+      - ea1rfi-network
     healthcheck:
       test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
       interval: 30s
@@ -39,5 +39,5 @@ services:
       start_period: 10s
 
 networks:
-  mcp-network:
+  ea1rfi-network:
     driver: bridge

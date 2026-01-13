@@ -32,7 +32,7 @@ services:
     # Uncomment if you want to use host networking for easier local testing
     # network_mode: host
     networks:
-      - mcp-network
+      - ea1rfi-network
     healthcheck:
       test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
       interval: 30s
@@ -41,5 +41,5 @@ services:
       start_period: 10s
 
 networks:
-  mcp-network:
+  ea1rfi-network:
     driver: bridge
