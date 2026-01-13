@@ -34,6 +34,9 @@ async def get_client() -> DXClusterClient:
 
     Returns:
         DXClusterClient instance.
+
+    Raises:
+        RuntimeError: If connection to DX cluster fails.
     """
     global _dx_client, _resource_handler, _tool_handler
 
@@ -42,7 +45,18 @@ async def get_client() -> DXClusterClient:
         config.validate()
 
         _dx_client = DXClusterClient(config)
-        await _dx_client.connect()
+        success = await _dx_client.connect()
+
+        if not success:
+            _dx_client = None
+            raise RuntimeError(
+                f"Failed to connect to DX cluster at {config.host}:{config.port}. "
+                f"Please verify:\n"
+                f"  1. DX_CLUSTER_HOST and DX_CLUSTER_PORT are correct\n"
+                f"  2. DX_CLUSTER_CALLSIGN is set to a valid callsign\n"
+                f"  3. The DX cluster server is reachable from your network\n"
+                f"  4. Firewall allows outbound connections to port {config.port}"
+            )
 
         _resource_handler = MCPResourceHandler(_dx_client)
         _tool_handler = MCPToolHandler(_dx_client)
@@ -60,6 +74,9 @@ async def list_resources() -> list[Resource]:
 
     Returns:
         List of Resource objects.
+
+    Raises:
+        RuntimeError: If connection to DX cluster fails.
     """
     await get_client()
     return _resource_handler.list_resources()
@@ -74,6 +91,9 @@ async def read_resource(uri: str) -> str:
 
     Returns:
         Resource content as string.
+
+    Raises:
+        RuntimeError: If connection to DX cluster fails.
     """
     await get_client()
     return _resource_handler.read_resource(uri)
@@ -85,6 +105,9 @@ async def list_tools() -> list[Tool]:
 
     Returns:
         List of Tool objects.
+
+    Raises:
+        RuntimeError: If connection to DX cluster fails.
     """
     await get_client()
     return _tool_handler.list_tools()
