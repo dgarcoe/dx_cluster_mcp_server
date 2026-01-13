@@ -26,7 +26,7 @@ services:
       - IARU_REGION=${IARU_REGION:-2}
     networks:
       # Must be on same network as nginx
-      - your_nginx_network  # Change this to match your nginx network name
+      - ea1rfi-network
     healthcheck:
       test: ["CMD", "python", "-c", "import sys; import urllib.request; urllib.request.urlopen('http://localhost:8000/health'); sys.exit(0)"]
       interval: 30s
@@ -35,5 +35,5 @@ services:
       start_period: 10s
 
 networks:
-  your_nginx_network:
+  ea1rfi-network:
     external: true  # Use your existing nginx network
