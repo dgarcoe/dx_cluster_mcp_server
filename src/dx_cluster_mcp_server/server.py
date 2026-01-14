@@ -21,6 +21,7 @@ import mcp.server.stdio
 from .config import DXClusterConfig
 from .dx_client import DXClusterClient
 from .mcp_handlers import MCPResourceHandler, MCPToolHandler
+from .oauth import OAuthConfig, validate_oauth_middleware
 
 
 # Global client instance
@@ -145,6 +146,12 @@ async def main_sse() -> None:
     from starlette.responses import JSONResponse
     import uvicorn
 
+    # Initialize OAuth configuration
+    oauth_config = OAuthConfig()
+    if not oauth_config.validate():
+        print("⚠ Invalid OAuth configuration. Server will not start.")
+        return
+
     # Create SSE transport
     sse = SseServerTransport("/messages")
 
@@ -199,6 +206,15 @@ async def main_sse() -> None:
         ]
     )
 
+    # Add OAuth middleware to Starlette app
+    from starlette.middleware.base import BaseHTTPMiddleware
+
+    class OAuthMiddleware(BaseHTTPMiddleware):
+        async def dispatch(self, request, call_next):
+            return await validate_oauth_middleware(request, call_next, oauth_config)
+
+    starlette_app.add_middleware(OAuthMiddleware)
+
     # Create ASGI middleware to intercept SSE paths
     async def asgi_app(scope, receive, send):
         if scope["type"] == "http":
@@ -236,6 +252,16 @@ async def main_sse() -> None:
         print("⚠ Running without TLS (HTTP only)")
         print("  For Claude Desktop, HTTPS is required")
         print("  Set MCP_SSL_CERTFILE and MCP_SSL_KEYFILE environment variables")
+
+    if oauth_config.enabled:
+        print(f"\n✓ OAuth authentication enabled")
+        print(f"  Client ID: {oauth_config.client_id}")
+        print(f"  Client Secret: {'*' * 8}{oauth_config.client_secret[-4:]}")
+        print(f"  Note: Include 'Authorization: Bearer <client_secret>' header in requests")
+    else:
+        print(f"\n⚠ OAuth authentication disabled")
+        print(f"  Server endpoints are publicly accessible")
+        print(f"  Set OAUTH_ENABLED=true to enable authentication")
 
     # Run server
     config = uvicorn.Config(
