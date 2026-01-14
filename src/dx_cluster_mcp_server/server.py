@@ -21,6 +21,7 @@ import mcp.server.stdio
 from .config import DXClusterConfig
 from .dx_client import DXClusterClient
 from .mcp_handlers import MCPResourceHandler, MCPToolHandler
+from .oauth import OAuthConfig, validate_oauth_middleware
 
 
 # Global client instance
@@ -34,6 +35,9 @@ async def get_client() -> DXClusterClient:
 
     Returns:
         DXClusterClient instance.
+
+    Raises:
+        RuntimeError: If connection to DX cluster fails.
     """
     global _dx_client, _resource_handler, _tool_handler
 
@@ -42,7 +46,18 @@ async def get_client() -> DXClusterClient:
         config.validate()
 
         _dx_client = DXClusterClient(config)
-        await _dx_client.connect()
+        success = await _dx_client.connect()
+
+        if not success:
+            _dx_client = None
+            raise RuntimeError(
+                f"Failed to connect to DX cluster at {config.host}:{config.port}. "
+                f"Please verify:\n"
+                f"  1. DX_CLUSTER_HOST and DX_CLUSTER_PORT are correct\n"
+                f"  2. DX_CLUSTER_CALLSIGN is set to a valid callsign\n"
+                f"  3. The DX cluster server is reachable from your network\n"
+                f"  4. Firewall allows outbound connections to port {config.port}"
+            )
 
         _resource_handler = MCPResourceHandler(_dx_client)
         _tool_handler = MCPToolHandler(_dx_client)
@@ -60,6 +75,9 @@ async def list_resources() -> list[Resource]:
 
     Returns:
         List of Resource objects.
+
+    Raises:
+        RuntimeError: If connection to DX cluster fails.
     """
     await get_client()
     return _resource_handler.list_resources()
@@ -74,6 +92,9 @@ async def read_resource(uri: str) -> str:
 
     Returns:
         Resource content as string.
+
+    Raises:
+        RuntimeError: If connection to DX cluster fails.
     """
     await get_client()
     return _resource_handler.read_resource(uri)
@@ -85,6 +106,9 @@ async def list_tools() -> list[Tool]:
 
     Returns:
         List of Tool objects.
+
+    Raises:
+        RuntimeError: If connection to DX cluster fails.
     """
     await get_client()
     return _tool_handler.list_tools()
@@ -121,6 +145,12 @@ async def main_sse() -> None:
     from starlette.routing import Route
     from starlette.responses import JSONResponse
     import uvicorn
+
+    # Initialize OAuth configuration
+    oauth_config = OAuthConfig()
+    if not oauth_config.validate():
+        print("⚠ Invalid OAuth configuration. Server will not start.")
+        return
 
     # Create SSE transport
     sse = SseServerTransport("/messages")
@@ -176,6 +206,15 @@ async def main_sse() -> None:
         ]
     )
 
+    # Add OAuth middleware to Starlette app
+    from starlette.middleware.base import BaseHTTPMiddleware
+
+    class OAuthMiddleware(BaseHTTPMiddleware):
+        async def dispatch(self, request, call_next):
+            return await validate_oauth_middleware(request, call_next, oauth_config)
+
+    starlette_app.add_middleware(OAuthMiddleware)
+
     # Create ASGI middleware to intercept SSE paths
     async def asgi_app(scope, receive, send):
         if scope["type"] == "http":
@@ -213,6 +252,16 @@ async def main_sse() -> None:
         print("⚠ Running without TLS (HTTP only)")
         print("  For Claude Desktop, HTTPS is required")
         print("  Set MCP_SSL_CERTFILE and MCP_SSL_KEYFILE environment variables")
+
+    if oauth_config.enabled:
+        print(f"\n✓ OAuth authentication enabled")
+        print(f"  Client ID: {oauth_config.client_id}")
+        print(f"  Client Secret: {'*' * 8}{oauth_config.client_secret[-4:]}")
+        print(f"  Note: Include 'Authorization: Bearer <client_secret>' header in requests")
+    else:
+        print(f"\n⚠ OAuth authentication disabled")
+        print(f"  Server endpoints are publicly accessible")
+        print(f"  Set OAUTH_ENABLED=true to enable authentication")
 
     # Run server
     config = uvicorn.Config(
