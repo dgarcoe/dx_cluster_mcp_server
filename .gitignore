@@ -211,3 +211,6 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Claude Desktop config (user-specific, should be copied to Claude Desktop config directory)
+claude_desktop_config.json
